@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#10163a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="מצוות היום">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>מצוות היום – Mitzvat HaYom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&family=Frank+Ruhl+Libre:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{ink:{DEFAULT:'#141a3d'},amber:{50:'#fbf5e6',100:'#f3e6c4',200:'#e8d29a',300:'#e3bb68',400:'#d9a444',500:'#c0852a',600:'#a96c1f',700:'#8a5517',800:'#6b4214',900:'#4a2d0e'}}}}}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<style>
+body{font-family:'Heebo',sans-serif;background:#f6efde;color:#1b2145;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+.serif{font-family:'Frank Ruhl Libre',serif}
+.nikud{font-family:'Frank Ruhl Libre','Times New Roman',serif;font-size:1.3rem;line-height:2.1}
+.pb{padding-bottom:calc(6.5rem + env(safe-area-inset-bottom,0px))}
+.nav{padding-bottom:env(safe-area-inset-bottom,0px)}
+.flame{transform-origin:50% 90%;animation:flick 1.6s ease-in-out infinite}
+@keyframes flick{0%,100%{transform:scale(1,1) rotate(-1deg)}25%{transform:scale(.96,1.06) rotate(1.5deg)}50%{transform:scale(1.04,.97) rotate(-1deg)}75%{transform:scale(.98,1.04) rotate(1deg)}}
+.cta{position:relative}
+.cta::after{content:'';position:absolute;inset:0;border-radius:9999px;border:2px solid #e8b04b;animation:ring 2.2s ease-out infinite;pointer-events:none}
+@keyframes ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.12,1.55);opacity:0}}
+.sheet{animation:up .38s cubic-bezier(.2,.9,.3,1)}
+@keyframes up{from{transform:translateY(100%)}}
+.fade{animation:fade .4s ease both}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}}
+.pop{animation:pop .4s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(.3)}100%{transform:scale(1)}}
+.draw path{stroke-dasharray:30;stroke-dashoffset:30;animation:draw .5s .1s ease forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.conf i{position:fixed;top:-16px;width:9px;height:15px;border-radius:2px;animation:fall 2.4s ease-in forwards;z-index:70}
+@keyframes fall{to{transform:translateY(112vh) rotate(760deg)}}
+.stars{background-image:radial-gradient(1.5px 1.5px at 20% 30%,#fff9 50%,transparent),radial-gradient(1px 1px at 70% 18%,#fff8 50%,transparent),radial-gradient(1.5px 1.5px at 88% 58%,#fff7 50%,transparent),radial-gradient(1px 1px at 33% 76%,#fff7 50%,transparent),radial-gradient(1px 1px at 55% 42%,#fff6 50%,transparent),radial-gradient(1px 1px at 8% 66%,#fff6 50%,transparent)}
+.glow{animation:glow 3s ease-in-out infinite}
+@keyframes glow{50%{opacity:.55;transform:scale(1.15)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+const KEY = 'mitzvatHaYom_v1';
+const dk = (d = new Date()) => d.toLocaleDateString('en-CA');
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
+const PRE = 'בָּרוּךְ אַתָּה ה׳ אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, ';
+const OPT = {
+  modeh:['מודה אני','הודיה עם ההתעוררות'],
+  netila:['נטילת ידיים','בבוקר או לפני לחם'],
+  bracha:['ברכה לפני אוכל','על אוכל או שתייה'],
+  shema:['קריאת שמע','בבוקר או לפני השינה'],
+  tefillin:['הנחת תפילין','הנחה בבוקר, עם ברכה'],
+  lashon:['שמירת הלשון','יום בלי לשון הרע'],
+  mezuza:['נישוק מזוזה','בכניסה או ביציאה מהבית'],
+  torah:['לימוד תורה','כמה דקות של לימוד'],
+  tefila:['תפילת שחרית','תפילה בבוקר'],
+  other:['מצווה אחרת','כל מעשה טוב שעשיתי'],
+  parents:['כיבוד הורים',''],tzedaka:['צדקה',''],
+};
+function optsFor(p) {
+  const a = ['modeh','netila','bracha','shema'];
+  if (p.tefillin) a.push('tefillin');
+  if (p.level !== 'beginner') a.push('lashon','mezuza');
+  if (p.level === 'advanced') a.push('torah','tefila');
+  a.push('other');
+  return a;
+}
+function calcStreak(done) {
+  let d = new Date(), n = 0;
+  if (!(done[dk(d)] || []).length) d.setDate(d.getDate() - 1);
+  while ((done[dk(d)] || []).length) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+function useCount(n) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    let s = null, raf;
+    const step = t => { if (!s) s = t; const p = Math.min((t - s) / 1000, 1); setV(Math.round(n * (1 - Math.pow(1 - p, 3)))); if (p < 1) raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [n]);
+  return v;
+}
+function useParasha() {
+  const [p, setP] = useState(() => { try { const c = JSON.parse(localStorage.getItem('mh_par')); return c && c.d === dk() ? c : null; } catch (e) { return null; } });
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    if (p) return;
+    (async () => {
+      try {
+        const t = new Date();
+        const [a, b] = await Promise.all([
+          fetch('https://www.sefaria.org/api/calendars').then(r => r.json()),
+          fetch(`https://www.hebcal.com/converter?cfg=json&g2h=1&gy=${t.getFullYear()}&gm=${t.getMonth() + 1}&gd=${t.getDate()}`).then(r => r.json()).catch(() => ({})),
+        ]);
+        const it = (a.calendar_items || []).find(x => x.title && x.title.en === 'Parashat Hashavua');
+        const v = { d: dk(), name: it.displayValue.he, ref: it.heRef, url: it.url, hd: b.hebrew || '' };
+        try { localStorage.setItem('mh_par', JSON.stringify(v)); } catch (e) {}
+        setP(v);
+      } catch (e) { setErr(true); }
+    })();
+  }, []);
+  return { p, err };
+}
+function Flame({ size = 120, lit = true }) {
+  return (
+    <svg viewBox="0 0 100 110" width={size} height={size * 1.1} className={lit ? 'flame' : ''} style={{ opacity: lit ? 1 : .35, filter: lit ? 'drop-shadow(0 0 16px rgba(255,160,50,.75))' : 'grayscale(1)' }}>
+      <defs><linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffd56e" /><stop offset="1" stopColor="#ee6428" /></linearGradient></defs>
+      <path d="M50 4C58 26 82 40 82 72a32 32 0 0 1-64 0c0-16 8-26 15-36 2 9 7 14 11 16C42 36 40 20 50 4Z" fill="url(#fg)" />
+      <path d="M50 54c5 11 16 18 16 32a16 16 0 0 1-32 0c0-9 6-14 9-21 2 4 4 7 7 7-1-6-1-12 0-18Z" fill="#fff3c9" opacity=".93" />
+    </svg>
+  );
+}
+const IC = { home:'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z', book:'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 1 2-2h13', cup:'M5 3h14l-2 18H7zM7 9h10', set:'M4 8h9M17 8h3M4 16h3M11 16h9M15 6v4M9 14v4' };
+function Ico({ n }) { return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={IC[n]} /></svg>; }
+
+const BL = [
+  {n:'לחם, חלה, פיתה',k:'hamotzi'},{n:'פיצה',k:'mezonot',note:'פרוסה או שתיים כנשנוש: מזונות. סעודה שלמה של פיצה: המוציא ונטילת ידיים.'},
+  {n:'במבה',k:'shehakol'},{n:'תפוח',k:'etz'},{n:'מים',k:'shehakol'},{n:'שוקולד',k:'shehakol'},
+  {n:'בננה',k:'etz'},{n:'תפוז',k:'etz'},{n:'ענבים',k:'etz'},{n:'תמרים',k:'etz'},{n:'אגוזים ושקדים',k:'etz'},
+  {n:'עגבנייה',k:'adama'},{n:'מלפפון',k:'adama'},{n:'גזר',k:'adama'},{n:'תפוח אדמה',k:'adama'},
+  {n:'צ\'יפס / חטיף תפוחי אדמה',k:'adama'},{n:'בוטנים',k:'adama'},
+  {n:'עוגה / עוגיות',k:'mezonot'},{n:'פסטה',k:'mezonot'},{n:'קורנפלקס / דגני בוקר',k:'mezonot'},{n:'אורז',k:'mezonot'},
+  {n:'חלב',k:'shehakol'},{n:'גלידה',k:'shehakol'},{n:'קפה / תה',k:'shehakol'},{n:'מיץ תפוזים',k:'shehakol'},{n:'בשר / עוף / דגים',k:'shehakol'},{n:'ביצה',k:'shehakol'},
+  {n:'יין / מיץ ענבים',k:'gafen'},
+];
+const BK = {
+  hamotzi:{t:'המוציא',txt:'הַמּוֹצִיא לֶחֶם מִן הָאָרֶץ'},
+  mezonot:{t:'מזונות',txt:'בּוֹרֵא מִינֵי מְזוֹנוֹת'},
+  etz:{t:'העץ',txt:'בּוֹרֵא פְּרִי הָעֵץ'},
+  adama:{t:'האדמה',txt:'בּוֹרֵא פְּרִי הָאֲדָמָה'},
+  shehakol:{t:'שהכול',txt:'שֶׁהַכֹּל נִהְיֶה בִּדְבָרוֹ'},
+  gafen:{t:'הגפן',txt:'בּוֹרֵא פְּרִי הַגָּפֶן'},
+};
+
+function Card({ children, className = '' }) {
+  return <div className={'bg-white rounded-2xl shadow-sm border border-amber-100 p-4 ' + className}>{children}</div>;
+}
+function Heb({ children }) { return <p className="nikud text-stone-800">{children}</p>; }
+
+function Onboarding({ onDone }) {
+  const [level, setLevel] = useState(null);
+  const [tef, setTef] = useState(null);
+  const levels = [['beginner','מתחיל/ה','רוצה להתחיל בצעדים קטנים'],['basic','בסיסי','מכיר/ה את היסודות'],['advanced','מתקדם/ת','רוצה אתגר יומי מלא']];
+  const ok = level && tef !== null;
+  return (
+    <div className="min-h-screen max-w-md mx-auto p-5 flex flex-col">
+      <div className="text-center mt-8 mb-6">
+        <div className="flex justify-center mb-3"><Flame size={84} /></div>
+        <h1 className="text-3xl font-extrabold text-amber-800">מצוות היום</h1>
+        <p className="text-stone-500 mt-1">כמה שאלות קצרות כדי להתאים לכם יעדים יומיים</p>
+      </div>
+      <h2 className="font-bold mb-2">מהי רמת הידע שלכם?</h2>
+      <div className="space-y-2 mb-6">
+        {levels.map(([k, t, s]) => (
+          <button key={k} onClick={() => setLevel(k)} className={'w-full text-right p-4 rounded-2xl border-2 transition ' + (level === k ? 'border-amber-600 bg-amber-50' : 'border-amber-100 bg-white')}>
+            <div className="font-bold">{t}</div><div className="text-sm text-stone-500">{s}</div>
+          </button>
+        ))}
+      </div>
+      <h2 className="font-bold mb-2">האם אתם מניחים תפילין?</h2>
+      <div className="grid grid-cols-2 gap-2 mb-8">
+        {[[true,'כן'],[false,'עדיין לא']].map(([v, t]) => (
+          <button key={t} onClick={() => setTef(v)} className={'p-4 rounded-2xl border-2 font-bold ' + (tef === v ? 'border-amber-600 bg-amber-50' : 'border-amber-100 bg-white')}>{t}</button>
+        ))}
+      </div>
+      <button disabled={!ok} onClick={() => onDone({ level, tefillin: tef })} className={'mt-auto w-full py-4 rounded-2xl text-white font-bold text-lg ' + (ok ? 'bg-ink active:scale-95 transition' : 'bg-stone-300')}>בואו נתחיל</button>
+    </div>
+  );
+}
+
+function Today({ profile, done, save, par, goTab }) {
+  const key = dk(), cur = done[key] || [], ok = cur.length > 0;
+  const streak = calcStreak(done), n = useCount(streak);
+  const [sheet, setSheet] = useState(false), [sel, setSel] = useState([]), [boom, setBoom] = useState(0);
+  const hr = new Date().getHours();
+  const open = () => { setSel(cur); setSheet(true); };
+  const tg = id => setSel(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+  const confirm = () => { save(sel); setSheet(false); if (sel.length && !ok) setBoom(b => b + 1); };
+  const conf = useMemo(() => boom ? [...Array(46)].map((_, i) => ({ l: Math.random() * 100, c: ['#e8b04b','#ee6428','#fff3c9','#7fb5ff','#f27c9a'][i % 5], dl: Math.random() * .5, du: 1.8 + Math.random() * 1.4 })) : [], [boom]);
+  const note = ok
+    ? (streak >= 30 ? 'חודש של התמדה. מדהים' : streak >= 7 ? 'שבוע שלם ויותר. ממשיכים' : streak >= 3 ? 'הרצף נבנה, יום אחרי יום' : 'היום נספר. התחלה טובה')
+    : (hr >= 19 && streak > 0 ? 'עוד כמה שעות לשמור על הרצף' : streak > 0 ? 'הלהבה מחכה. מצווה אחת מספיקה' : 'הלהבה מחכה שתדליק אותה');
+  const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return d; });
+  const nm = ['א','ב','ג','ד','ה','ו','ש'];
+  return (
+    <div className="-mx-4 -mt-2">
+      {boom > 0 && <div className="conf" key={boom}>{conf.map((c, i) => <i key={i} style={{ left: c.l + 'vw', background: c.c, animationDelay: c.dl + 's', animationDuration: c.du + 's' }} />)}</div>}
+      <div className="stars relative bg-gradient-to-b from-[#0e1336] to-[#27307a] text-white rounded-b-[2.6rem] px-6 pt-8 pb-14 overflow-hidden">
+        <div className="glow absolute w-56 h-56 rounded-full bg-orange-400/20 blur-3xl top-6 right-1/2 translate-x-1/2" />
+        <div className="relative text-center text-amber-200/90 text-sm tracking-wide">{par.p && par.p.hd ? par.p.hd + ' · ' : ''}{new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+        <div className="relative flex items-center justify-center gap-5 mt-5">
+          <Flame size={96} lit={ok} />
+          <div>
+            <div className="serif font-black text-[5.5rem] leading-none text-amber-200">{n}</div>
+            <div className="text-white/80 -mt-1">ימים ברצף</div>
+          </div>
+        </div>
+        <p className="relative text-center text-white/90 mt-4 serif text-lg">{note}</p>
+      </div>
+      <div className="px-4">
+        <div className="-mt-7 relative z-10">
+          {!ok ? (
+            <button onClick={open} className="cta w-full rounded-full py-5 font-extrabold text-xl text-ink bg-gradient-to-l from-amber-300 to-amber-400 shadow-[0_10px_30px_-8px_rgba(192,133,42,.8)] active:scale-95 transition">עשיתי היום מצווה?</button>
+          ) : (
+            <div className="fade bg-white rounded-3xl p-4 shadow-md border border-amber-100">
+              <div className="flex items-center gap-3">
+                <svg className="draw pop" width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="21" fill="#2e8b57" /><path d="M12 23l7 7 13-14" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <div className="flex-1"><div className="font-extrabold serif text-xl">היום נספר</div><div className="text-sm text-stone-500">אפשר להוסיף עוד מצוות</div></div>
+                <button onClick={open} className="text-sm font-bold text-amber-700 px-3 py-2 rounded-full bg-amber-50">עריכה</button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">{cur.map(id => <span key={id} className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-sm font-medium">{OPT[id] ? OPT[id][0] : id}</span>)}</div>
+            </div>
+          )}
+        </div>
+        <div className="fade bg-ink text-white rounded-3xl p-5 mt-5 relative overflow-hidden" style={{ animationDelay: '.1s' }}>
+          <div className="absolute -left-6 -bottom-8 text-[8rem] serif opacity-[.07] leading-none">פ</div>
+          <div className="text-amber-300 text-xs tracking-widest">פרשת השבוע</div>
+          {par.p ? (<>
+            <div className="serif font-black text-4xl mt-1">{par.p.name}</div>
+            <div className="text-white/70 text-sm mt-1">{par.p.ref}</div>
+            <a href={'https://www.sefaria.org/' + par.p.url + '?lang=he'} target="_blank" rel="noopener" className="inline-block mt-4 px-4 py-2 rounded-full bg-amber-400 text-ink font-bold text-sm">לקריאת הפרשה ←</a>
+          </>) : par.err ? <p className="text-white/70 text-sm mt-2">לא הצלחנו לטעון את הפרשה. בדקו חיבור לאינטרנט ונסו שוב.</p> : <div className="h-16 mt-2 rounded-xl bg-white/10 animate-pulse" />}
+        </div>
+        <div className="bg-white rounded-3xl p-4 mt-5 border border-amber-100 fade" style={{ animationDelay: '.2s' }}>
+          <div className="font-bold mb-3">השבוע שלי</div>
+          <div className="flex justify-between">{days.map((d, i) => { const on = (done[dk(d)] || []).length > 0; return (
+            <div key={dk(d)} className="text-center fade" style={{ animationDelay: (.25 + i * .07) + 's' }}>
+              <div className={'w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold ' + (on ? 'bg-gradient-to-b from-amber-300 to-orange-500 text-white shadow' : 'bg-stone-100 text-stone-400')}>{on ? '✓' : d.getDate()}</div>
+              <div className="text-xs text-stone-500 mt-1">{nm[d.getDay()]}</div>
+            </div>); })}</div>
+        </div>
+        {!profile.remind && <button onClick={() => goTab('me')} className="w-full mt-4 py-3 rounded-2xl border-2 border-dashed border-amber-300 text-amber-800 font-bold text-sm">להפעיל תזכורות פעמיים ביום ←</button>}
+      </div>
+      {sheet && (
+        <div className="fixed inset-0 z-50">
+          <div onClick={() => setSheet(false)} className="fade absolute inset-0 bg-ink/60" />
+          <div className="sheet absolute bottom-0 inset-x-0 max-w-md mx-auto bg-[#fbf6ea] rounded-t-[2rem] p-5 max-h-[88vh] overflow-y-auto" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom,0px))' }}>
+            <div className="w-10 h-1 rounded-full bg-stone-300 mx-auto mb-4" />
+            <h3 className="serif font-black text-2xl">מה עשית היום?</h3>
+            <p className="text-sm text-stone-500 mb-4">מצווה אחת מספיקה כדי שהיום יספר</p>
+            <div className="space-y-2">
+              {optsFor(profile).map((id, i) => { const on = sel.includes(id); return (
+                <button key={id} onClick={() => tg(id)} className={'fade w-full flex items-center gap-3 p-3 rounded-2xl border-2 text-right transition active:scale-[.98] ' + (on ? 'bg-ink border-ink text-white' : 'bg-white border-amber-100')} style={{ animationDelay: i * .03 + 's' }}>
+                  <span className={'w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 ' + (on ? 'bg-amber-400 border-amber-400 text-ink pop' : 'border-amber-300')}>{on ? '✓' : ''}</span>
+                  <span className="flex-1"><span className="block font-bold">{OPT[id][0]}</span><span className={'block text-xs ' + (on ? 'text-white/60' : 'text-stone-500')}>{OPT[id][1]}</span></span>
+                </button>); })}
+            </div>
+            <button disabled={!sel.length && !ok} onClick={confirm} className={'w-full mt-5 py-4 rounded-full font-extrabold text-lg transition ' + (sel.length ? 'bg-gradient-to-l from-amber-300 to-amber-400 text-ink shadow-lg' : ok ? 'bg-red-100 text-red-700' : 'bg-stone-200 text-stone-400')}>{sel.length ? 'שמור ליום ההתמדה' : ok ? 'בטל את היום' : 'בחרו לפחות אחת'}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Acc({ icon, title, children, def }) {
+  const [o, setO] = useState(!!def);
+  return (
+    <Card className="!p-0 overflow-hidden">
+      <button onClick={() => setO(!o)} className="w-full flex items-center justify-between p-4 text-right">
+        <span className="font-bold"><span className="inline-block w-2 h-2 rotate-45 bg-amber-500 ml-3"></span>{title}</span><span className="text-amber-700">{o ? '▲' : '▼'}</span>
+      </button>
+      {o && <div className="px-4 pb-4 space-y-3 border-t border-amber-100 pt-3">{children}</div>}
+    </Card>
+  );
+}
+function Step({ n, children }) {
+  return <div className="flex gap-3"><div className="w-7 h-7 shrink-0 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center text-sm">{n}</div><div className="text-sm text-stone-700 flex-1">{children}</div></div>;
+}
+
+function Learn() {
+  const [sh, setSh] = useState('morning');
+  return (
+    <div className="space-y-3">
+      <h2 className="font-bold text-xl">מרכז לימוד</h2>
+      <Acc icon="📿" title="הנחת תפילין – צעד אחר צעד" def>
+        <Step n="1">מניחים תפילין בבוקר בימי חול. פותחים את הנרתיק ומוציאים קודם את של יד (שמאל ליד ימנית, ימין לשמאליים).</Step>
+        <Step n="2">מקצרים את הרצועה ומניחים את הקופסה של יד על שריר היד העליונה, הפנימי, כשהיא מול הלב.</Step>
+        <Step n="3">לפני ההידוק אומרים את הברכה:</Step>
+        <Heb>{PRE}אֲשֶׁר קִדְּשָׁנוּ בְּמִצְוֺתָיו וְצִוָּנוּ לְהָנִיחַ תְּפִלִּין.</Heb>
+        <Step n="4">מהדקים ועוטפים את הרצועה שבע פעמים סביב האמה.</Step>
+        <Step n="5">מניחים את של ראש: הקובייה במרכז הראש מעל קו השיער, והקשר בעורף.</Step>
+        <Step n="6">מברכים (ואם לא שוחחו בינתיים, מברכים רק ברכה אחת על שניהם):</Step>
+        <Heb>{PRE}אֲשֶׁר קִדְּשָׁנוּ בְּמִצְוֺתָיו וְצִוָּנוּ עַל מִצְוַת תְּפִלִּין.</Heb>
+        <Step n="7">מיד אחר כך אומרים:</Step>
+        <Heb>בָּרוּךְ שֵׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד.</Heb>
+        <p className="text-xs text-stone-500">מומלץ ללמוד את ההנחה פעם ראשונה מאדם מנוסה או רב. מנהגי העדות שונים מעט.</p>
+      </Acc>
+      <Acc icon="📖" title="קריאת שמע">
+        <div className="flex gap-2">
+          {[['morning','שחרית'],['night','על המיטה']].map(([k, t]) => (
+            <button key={k} onClick={() => setSh(k)} className={'flex-1 py-2 rounded-xl font-bold ' + (sh === k ? 'bg-amber-700 text-white' : 'bg-amber-50 text-amber-800')}>{t}</button>
+          ))}
+        </div>
+        <p className="text-sm text-stone-600">{sh === 'morning' ? 'קוראים בבוקר אחרי הנחת תפילין. הפסוק הראשון הוא קבלת עול מלכות שמיים, ומכסים את העיניים בכף היד.' : 'לפני השינה אומרים את הפסוק הראשון בכוונה, ומוסיפים ברכת "המפיל" (בחלק מהנוסחים קוראים פרשה שלמה).'}</p>
+        {sh === 'night' && <Heb>{PRE}הַמַּפִּיל חֶבְלֵי שֵׁנָה עַל עֵינָי וּתְנוּמָה עַל עַפְעַפָּי.</Heb>}
+        <Heb>שְׁמַע יִשְׂרָאֵל ה׳ אֱלֹהֵינוּ ה׳ אֶחָד.</Heb>
+        <p className="text-xs text-stone-500">בלחש:</p>
+        <Heb>בָּרוּךְ שֵׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד.</Heb>
+        <Heb>וְאָהַבְתָּ אֵת ה׳ אֱלֹהֶיךָ בְּכָל לְבָבְךָ וּבְכָל נַפְשְׁךָ וּבְכָל מְאֹדֶךָ. וְהָיוּ הַדְּבָרִים הָאֵלֶּה אֲשֶׁר אָנֹכִי מְצַוְּךָ הַיּוֹם עַל לְבָבֶךָ. וְשִׁנַּנְתָּם לְבָנֶיךָ וְדִבַּרְתָּ בָּם בְּשִׁבְתְּךָ בְּבֵיתֶךָ וּבְלֶכְתְּךָ בַדֶּרֶךְ וּבְשָׁכְבְּךָ וּבְקוּמֶךָ.</Heb>
+      </Acc>
+      <Acc icon="🌅" title="מודה אני">
+        <p className="text-sm text-stone-600">אומרים מיד בהתעוררות, בלי נטילת ידיים, כי אין בו שם ה׳. זו הודיה על יום חדש. נשים אומרות "מוֹדָה".</p>
+        <Heb>מוֹדֶה אֲנִי לְפָנֶיךָ מֶלֶךְ חַי וְקַיָּם, שֶׁהֶחֱזַרְתָּ בִּי נִשְׁמָתִי בְּחֶמְלָה, רַבָּה אֱמוּנָתֶךָ.</Heb>
+      </Acc>
+      <Acc icon="💧" title="נטילת ידיים">
+        <p className="text-sm text-stone-600">בבוקר ולפני אכילת לחם. ממלאים כוס, שופכים שלוש פעמים על יד ימין ואז על שמאל, ואז מברכים ומנגבים.</p>
+        <Heb>{PRE}אֲשֶׁר קִדְּשָׁנוּ בְּמִצְוֺתָיו וְצִוָּנוּ עַל נְטִילַת יָדָיִם.</Heb>
+      </Acc>
+      <Acc icon="🤍" title="כיבוד הורים">
+        <p className="text-sm text-stone-600">אחת מעשרת הדיברות. כולל כבוד בדיבור ובמעשה: לא להתווכח בחוסר כבוד, לעזור, להתקשר ולשאול לשלומם. מצווה שמתקיימת בקטן ובגדול.</p>
+      </Acc>
+      <Acc icon="🪙" title="צדקה">
+        <p className="text-sm text-stone-600">נתינה לנזקקים. אין סכום מינימלי ליום, וגם מטבע קטן הוא מצווה. מקובל להפריש כ-10% מההכנסה, ולא יותר מחמישית מהרכוש.</p>
+      </Acc>
+      <Acc icon="🤐" title="שמירת הלשון">
+        <p className="text-sm text-stone-600">איסור לשון הרע (אמירת דבר שלילי אמיתי על אדם) ורכילות. טיפ להתחלה: לפני שמדברים על אדם שלא נוכח, שואלים "האם זה נחוץ והאם אני מוכן/ה שיגידו עליי כך?"</p>
+      </Acc>
+      <Acc icon="🚪" title="נישוק מזוזה">
+        <p className="text-sm text-stone-600">המזוזה בצד ימין של הפתח (בכניסה) ובה פרשיות שמע. נוגעים בה באצבעות ומנשקים אותן, כביטוי של אהבה והזכרה שה׳ שומר על הבית.</p>
+      </Acc>
+    </div>
+  );
+}
+
+function Blessings() {
+  const [q, setQ] = useState('');
+  const [sel, setSel] = useState(null);
+  const res = useMemo(() => BL.filter(b => b.n.includes(q.trim())), [q]);
+  const chips = ['פיצה','במבה','תפוח','מים','שוקולד','בננה'];
+  return (
+    <div className="space-y-3">
+      <h2 className="font-bold text-xl">ברכות הנהנין</h2>
+      <p className="text-sm text-stone-500">חפשו מה אוכלים או שותים וקבלו את הברכה לפני.</p>
+      <input value={q} onChange={e => { setQ(e.target.value); setSel(null); }} placeholder="🔍 למשל: פיצה, תפוח, במבה..." className="w-full p-3 rounded-2xl border-2 border-amber-100 bg-white focus:outline-none focus:border-amber-500" />
+      <div className="flex flex-wrap gap-2">
+        {chips.map(c => <button key={c} onClick={() => { setQ(c); setSel(null); }} className="px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-medium">{c}</button>)}
+      </div>
+      {res.length === 0 && <Card className="text-center text-stone-500">לא נמצא. נסו מילה אחרת, או ברכה כללית: "שהכול נהיה בדברו" מתאימה לרוב המאכלים שאינם ממשפחות אחרות.</Card>}
+      {res.map(b => {
+        const x = BK[b.k], o = sel === b.n;
+        return (
+          <Card key={b.n}>
+            <button className="w-full flex justify-between items-center text-right" onClick={() => setSel(o ? null : b.n)}>
+              <span className="font-bold">{b.n}</span>
+              <span className="px-3 py-1 rounded-full bg-amber-700 text-white text-sm">{x.t}</span>
+            </button>
+            {(o || res.length === 1) && (
+              <div className="mt-3 border-t border-amber-100 pt-3">
+                <Heb>{PRE}{x.txt}.</Heb>
+                {b.note && <p className="text-sm text-stone-600 mt-1">{b.note}</p>}
+              </div>
+            )}
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+function addCal(t) {
+  const d = new Date(), p = x => String(x).padStart(2, '0');
+  const ds = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate());
+  const st = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const ev = (tm, txt, id) => `BEGIN:VEVENT\r\nUID:${id}@mitzvathayom\r\nDTSTAMP:${st}\r\nDTSTART:${ds}T${tm.replace(':', '')}00\r\nDURATION:PT15M\r\nRRULE:FREQ=DAILY\r\nSUMMARY:${txt}\r\nBEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:${txt}\r\nTRIGGER:PT0S\r\nEND:VALARM\r\nEND:VEVENT\r\n`;
+  const s = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//MitzvatHaYom//HE\r\nCALSCALE:GREGORIAN\r\n' + ev(t.am, 'מצוות היום: עשית כבר מצווה היום?', 'am') + ev(t.pm, 'מצוות היום: עוד לא מאוחר לשמור על הרצף', 'pm') + 'END:VCALENDAR';
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent)) { location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(s); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([s], { type: 'text/calendar;charset=utf-8' }));
+  a.download = 'mitzvat-hayom.ics'; document.body.appendChild(a); a.click(); a.remove();
+}
+
+function Profile({ profile, setProfile, reset, done }) {
+  const total = Object.values(done).reduce((a, b) => a + b.length, 0);
+  const days = Object.keys(done).filter(k => done[k].length).length;
+  const lv = { beginner: 'מתחיל/ה', basic: 'בסיסי', advanced: 'מתקדם/ת' };
+  const t = profile.times || { am: '08:00', pm: '20:00' };
+  return (
+    <div className="space-y-4">
+      <h2 className="serif font-black text-2xl">הגדרות</h2>
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="text-center"><div className="serif font-black text-4xl text-amber-700">{total}</div><div className="text-sm text-stone-500">מצוות שבוצעו</div></Card>
+        <Card className="text-center"><div className="serif font-black text-4xl text-amber-700">{days}</div><div className="text-sm text-stone-500">ימי התמדה</div></Card>
+      </div>
+      <Card>
+        <div className="font-bold">תזכורות פעמיים ביום</div>
+        <p className="text-sm text-stone-500 mt-1 mb-3">בחרו שעות והוסיפו ליומן האייפון. התזכורות יגיעו כהתראה גם כשהאפליקציה סגורה.</p>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          {[['am','בוקר'],['pm','ערב']].map(([k, l]) => (
+            <label key={k} className="block bg-amber-50 rounded-xl p-3"><span className="text-xs text-stone-500">{l}</span>
+              <input type="time" value={t[k]} onChange={e => setProfile({ ...profile, times: { ...t, [k]: e.target.value } })} className="block w-full bg-transparent font-bold text-xl outline-none" /></label>
+          ))}
+        </div>
+        <button onClick={() => { addCal(t); setProfile({ ...profile, times: t, remind: true }); }} className="w-full py-3 rounded-xl bg-ink text-white font-bold active:scale-95 transition">הוסף תזכורות ליומן</button>
+        <p className="text-xs text-stone-400 mt-2">באייפון יופיע חלון של היומן: לחצו "הוסף הכול". לשינוי שעות, מחקו את האירועים הישנים ביומן והוסיפו מחדש.</p>
+      </Card>
+      <Card>
+        <div className="font-bold mb-2">רמת ידע</div>
+        <div className="flex gap-2">
+          {Object.entries(lv).map(([k, x]) => <button key={k} onClick={() => setProfile({ ...profile, level: k })} className={'flex-1 py-2 rounded-xl text-sm font-bold transition ' + (profile.level === k ? 'bg-ink text-white' : 'bg-amber-50 text-amber-800')}>{x}</button>)}
+        </div>
+        <label className="flex items-center justify-between mt-4">
+          <span className="font-bold">מניח/ה תפילין</span>
+          <input type="checkbox" className="w-6 h-6 accent-amber-600" checked={profile.tefillin} onChange={e => setProfile({ ...profile, tefillin: e.target.checked })} />
+        </label>
+      </Card>
+      <Card>
+        <p className="text-sm text-stone-500 mb-3">הנתונים נשמרים רק במכשיר שלכם. טיפ לאייפון: ב-Safari לחצו "שיתוף" ואז "הוסף למסך הבית" כדי שהאפליקציה תיפתח במסך מלא.</p>
+        <button onClick={() => { if (confirm('למחוק את כל הנתונים ולהתחיל מחדש?')) reset(); }} className="w-full py-3 rounded-xl bg-red-50 text-red-700 font-bold">איפוס כל הנתונים</button>
+      </Card>
+    </div>
+  );
+}
+
+function App() {
+  const init = load();
+  const [profile, setProfile] = useState(init.profile || null);
+  const [done, setDone] = useState(init.done || {});
+  const [tab, setTab] = useState('today');
+  const par = useParasha();
+  useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify({ profile, done })); } catch (e) {} }, [profile, done]);
+  const save = ids => setDone(d => { const n = { ...d }; if (ids.length) n[dk()] = ids; else delete n[dk()]; return n; });
+  if (!profile) return <Onboarding onDone={setProfile} />;
+  const tabs = [['today','היום','home'],['learn','לימוד','book'],['bless','ברכות','cup'],['me','הגדרות','set']];
+  return (
+    <div className="max-w-md mx-auto min-h-screen">
+      <main className={'px-4 pb ' + (tab === 'today' ? '' : 'pt-8')} style={{ paddingTop: tab === 'today' ? 'env(safe-area-inset-top,0px)' : undefined }}>
+        <div key={tab} className="fade">
+          {tab === 'today' && <Today profile={profile} done={done} save={save} par={par} goTab={setTab} />}
+          {tab === 'learn' && <Learn />}
+          {tab === 'bless' && <Blessings />}
+          {tab === 'me' && <Profile profile={profile} setProfile={setProfile} done={done} reset={() => { setProfile(null); setDone({}); }} />}
+        </div>
+      </main>
+      <nav className="nav fixed bottom-0 inset-x-0 bg-[#fbf6ea]/95 backdrop-blur border-t border-amber-100 z-40">
+        <div className="max-w-md mx-auto grid grid-cols-4">
+          {tabs.map(([k, l, ic]) => (
+            <button key={k} onClick={() => { setTab(k); window.scrollTo(0, 0); }} className={'py-2 flex flex-col items-center gap-0.5 transition ' + (tab === k ? 'text-amber-700 font-bold' : 'text-stone-400')}>
+              <span className={'px-4 py-1 rounded-full transition ' + (tab === k ? 'bg-amber-100' : '')}><Ico n={ic} /></span><span className="text-xs">{l}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
