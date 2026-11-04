@@ -97,7 +97,7 @@ body{font-family:'Heebo',sans-serif;background:#f6efde;color:#1b2145;-webkit-tap
           if (perm === 'granted') {
             const messaging = getMessaging(app);
             // להחלפה במפתח ה-VAPID הציבורי שלך מ-Firebase Console
-            const token = await getToken(messaging, { vapidKey: 'YOUR_PUBLIC_VAPID_KEY_HERE' }).catch(e => null);
+            const token = await getToken(messaging, { vapidKey: 'BIp3cI6UbQIFh9xstKmZvGjlNmtto4daQaKqwBk2MoAN7ShOn9b0IxWTHc8SbgmRn2KmyXwyQl2eSLvIM1iYnqA' }).catch(e => null);
             if (token && user) {
               await setDoc(doc(db, "users", user.uid), { fcmToken: token }, { merge: true });
               return true;
