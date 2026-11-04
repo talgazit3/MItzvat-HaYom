@@ -90,7 +90,7 @@ body{font-family:'Heebo',sans-serif;background:#f6efde;color:#1b2145;-webkit-tap
           const perm = await Notification.requestPermission();
           if (perm === 'granted') {
             const messaging = getMessaging(app);
-            const token = await getToken(messaging, { vapidKey: 'BN1g08k-P3iSst4gWvQ2y_fC4gK-a2B3c4d5e6f7g8h9i0j' }).catch(() => null);
+            const token = await getToken(messaging, { vapidKey: 'BIp3cI6UbQIFh9xstKmZvGjlNmtto4daQaKqwBk2MoAN7ShOn9b0IxWTHc8SbgmRn2KmyXwyQl2eSLvIM1iYnqA' }).catch(() => null);
             if (token && user) {
               await setDoc(doc(db, "users", user.uid), { fcmToken: token }, { merge: true });
               return true;
