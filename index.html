@@ -216,6 +216,7 @@ function AuthScreen({ installPrompt, triggerInstall, onGoogleSuccess }) {
   const [pushApproved, setPushApproved] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const handleRequestPush = async () => {
     try {
@@ -263,19 +264,28 @@ function AuthScreen({ installPrompt, triggerInstall, onGoogleSuccess }) {
 
       <div className="space-y-4 bg-white p-5 rounded-3xl border border-amber-100 shadow-md">
         
-        {/* step 1: הורדה כקיצור דרך */}
+        {/* שלב 1: הורדת האפליקציה / קיצור דרך */}
         <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
           <div className="font-extrabold text-amber-900 text-sm mb-1">1. הורדת האפליקציה לטלפון</div>
-          <p className="text-xs text-stone-600 mb-3">חובה להוריד את האתר כקיצור דרך למסך הבית כדי לקבל התראות יומיות.</p>
-          <button 
-            onClick={triggerInstall}
-            className="w-full py-3 rounded-xl bg-amber-600 text-white font-bold text-sm active:scale-95 transition shadow"
-          >
-            {installPrompt ? '📲 הורד כקיצור דרך למסך הבית' : '✓ האפליקציה מוכנה/מותקנת'}
-          </button>
+          <p className="text-xs text-stone-600 mb-2">חובה להוסיף את האתר למסך הבית כדי לאפשר קבלת הודעות.</p>
+          
+          {isIOS ? (
+            <div className="bg-white p-3 rounded-xl border border-amber-200 text-xs text-stone-700 space-y-1">
+              <div className="font-bold text-amber-900">📱 הוראות לאייפון (Safari):</div>
+              <div>1. לחצו על כפתור ה<b>שיתוף</b> בתחתית המסך (ריבוע עם חץ כלפי מעלה).</div>
+              <div>2. גללו בתפריט ולחצו על <b>"הוסף למסך הבית" (Add to Home Screen)</b>.</div>
+            </div>
+          ) : (
+            <button 
+              onClick={triggerInstall}
+              className="w-full py-3 rounded-xl bg-amber-600 text-white font-bold text-sm active:scale-95 transition shadow"
+            >
+              {installPrompt ? '📲 לחץ להורדת קיצור דרך למסך הבית' : '✓ האפליקציה פתוחה כאפליקציה מותקנת'}
+            </button>
+          )}
         </div>
 
-        {/* step 2: אישור התראות Push */}
+        {/* שלב 2: אישור התראות Push */}
         <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
           <div className="font-extrabold text-amber-900 text-sm mb-1">2. הרשאה לשליחת הודעות</div>
           <p className="text-xs text-stone-600 mb-3">אישור הודעות ישירות מהאתר כדי שלא תפספס את הרצף.</p>
@@ -288,7 +298,7 @@ function AuthScreen({ installPrompt, triggerInstall, onGoogleSuccess }) {
           </button>
         </div>
 
-        {/* step 3: התחברות Google */}
+        {/* שלב 3: התחברות Google */}
         <div className="pt-2">
           <button 
             onClick={handleGoogleLogin}
@@ -421,7 +431,6 @@ function Step({ n, children }) {
   return <div className="flex gap-3"><div className="w-7 h-7 shrink-0 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center text-sm">{n}</div><div className="text-sm text-stone-700 flex-1">{children}</div></div>;
 }
 
-/* מרכז הלימוד המלא והשלם 100% */
 function Learn() {
   const [sh, setSh] = useState('morning');
   return (
@@ -631,7 +640,6 @@ function App() {
     );
   }
 
-  /* אם המשתמש לא מחובר – מציגים אך ורק את מסך הכניסה של Google והרשאות התראות */
   if (!user) {
     return (
       <AuthScreen 
