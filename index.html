@@ -605,10 +605,13 @@ function App() {
 
   useEffect(() => {
     if (window.FB) {
-      const unsub = window.FB.onAuthStateChanged(window.FB.auth, (u) => {
+      const unsub = window.FB.onAuthStateChanged(window.FB.auth, async (u) => {
         setUser(u);
         setLoadingAuth(false);
         if (u) {
+          // רישום אוטומטי של הטוקן ב-Firestore עבור המשתמש החדש ברגע ההתחברות
+          await window.FB.requestPushPermission(u).catch(() => {});
+
           const ref = window.FB.doc(window.FB.db, "users", u.uid);
           window.FB.onSnapshot(ref, (snap) => {
             if (snap.exists()) {
