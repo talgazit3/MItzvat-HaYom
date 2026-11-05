@@ -12,9 +12,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// חובה להגדיר כאן את מפתח ה-VAPID כדי שה-Service Worker יוכל לקבל הודעות ברקע
-messaging.usePublicVapidKey('
-BO-3YOab_6jErJzsv68wNLO1k9UBD3pUIqRo9vlOI2l2iCdIHi_ZzjmxCJ-RN19bmQcYvZ7yoidrw8LTdazqdQ0');
+messaging.usePublicVapidKey('BO-3YOab_6jErJzv68WNL01k9UBD3pUIqRo9vlO12l2iCdIHi_ZzjmxCJ-RN19bmQCYvZ7yoidrw8LTdazqDQ');
 
 messaging.onBackgroundMessage((payload) => {
   const title = payload.notification?.title || 'מצוות היום';
