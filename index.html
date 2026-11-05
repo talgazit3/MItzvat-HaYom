@@ -89,8 +89,14 @@ body{font-family:'Heebo',sans-serif;background:#f6efde;color:#1b2145;-webkit-tap
         if ('Notification' in window && 'serviceWorker' in navigator) {
           const perm = await Notification.requestPermission();
           if (perm === 'granted') {
+            // רישום ה-Service Worker והעברתו ל-getToken
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
             const messaging = getMessaging(app);
-            const token = await getToken(messaging, { vapidKey: 'BO-3YOab_6jErJzsv68wNLO1k9UBD3pUIqRo9vlOI2l2iCdIHi_ZzjmxCJ-RN19bmQcYvZ7yoidrw8LTdazqdQ0' }).catch(() => null);
+            const token = await getToken(messaging, { 
+              vapidKey: 'BO-3YOab_6jErJzsv68wNLO1k9UBD3pUIqRo9vlOI2l2iCdIHi_ZzjmxCJ-RN19bmQcYvZ7yoidrw8LTdazqDQ0',
+              serviceWorkerRegistration: registration 
+            }).catch(() => null);
+
             if (token && user) {
               await setDoc(doc(db, "users", user.uid), { fcmToken: token }, { merge: true });
               return true;
